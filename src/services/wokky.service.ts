@@ -10,7 +10,26 @@ const isWokky = (_latitude: number, _longitude: number) => {
     longitude: _longitude,
   });
 };
+
+const registerNotification = (
+  _latitude: number,
+  _longitude: number,
+  subscription: any
+) => {
+  console.log({
+    latitude: _latitude,
+    longitude: _longitude,
+    subscription: subscription,
+  });
+  return http.post<any>("/subscribe", {
+    latitude: _latitude,
+    longitude: _longitude,
+    subscription: subscription,
+  });
+};
+
 const WokkyService = {
   isWokky,
+  registerNotification,
 };
 export default WokkyService;
