@@ -137,13 +137,45 @@ function App() {
       timeout: 5000,
       maximumAge: 0,
     };
+    const handleServiceWorker = async (pos: any) => {
+      const register = await navigator.serviceWorker.register(
+        "/service-worker.js"
+      );
 
+      const subscription = await register.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey:
+          "BHeLDwj1k1ghpb8OkfnvCC0rzDaMGwucwmohZ2tOEKhfRWBwiuaonCZYt6GEhlLDXyzi3Qvzoqp1oELkUtBx97A",
+      });
+
+      WokkyService.registerNotification(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        subscription
+      )
+        .then((response: any) => {
+          console.log(response.data as WokkyDTO);
+          // setWokkyData(response.data);
+          // setAPILoaded(true);
+        })
+        .catch((error) => {
+          console.log("Error: ", error);
+        });
+
+      // const data = await res.json();
+      // console.log(data);
+    };
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocation({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         }); // store data in usestate
+        if ("serviceWorker" in navigator) {
+          handleServiceWorker(pos).catch((error) => {
+            console.error(error);
+          });
+        }
         setAPILoaded(false);
         WokkyService.isWokky(pos.coords.latitude, pos.coords.longitude)
           .then((response: any) => {
@@ -162,6 +194,7 @@ function App() {
       options
     );
   }, []);
+
   if (userDenied) {
     return (
       <Box
