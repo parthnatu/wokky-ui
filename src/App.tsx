@@ -7,11 +7,12 @@ import {
   IoArrowUpCircle,
   IoCheckmarkCircle,
   IoCloseCircle,
+  IoNotifications,
   IoSadOutline,
   IoTimeOutline,
 } from "react-icons/io5";
 import { motion } from "framer-motion";
-
+import { CookiesProvider, useCookies } from "react-cookie";
 import {
   Box,
   Skeleton,
@@ -23,6 +24,7 @@ import {
   StatNumber,
   Flex,
   Icon,
+  IconButton,
 } from "@chakra-ui/react";
 
 export function NextWokkable({ nextWokkable }: any) {
@@ -127,17 +129,13 @@ export function WokkyView({ data }: any) {
 }
 
 function App() {
-  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
-  const [wokkyData, setWokkyData] = useState({} as WokkyDTO);
-  const [apiLoaded, setAPILoaded] = useState(false);
-  const [userDenied, setUserDenied] = useState(false);
-  useEffect(() => {
-    var options = {
-      enableHighAccuracy: true,
-      timeout: 5000,
-      maximumAge: 0,
-    };
-    const handleServiceWorker = async (pos: any) => {
+  const [cookies, setCookie] = useCookies(["notification-toggle"]);
+
+  function handleNotificationToggle() {
+    setCookie("notification-toggle", !cookies["notification-toggle"], {
+      path: "/",
+    });
+    const handleServiceWorker = async () => {
       const register = await navigator.serviceWorker.register(
         "/service-worker.js"
       );
@@ -149,8 +147,8 @@ function App() {
       });
 
       WokkyService.registerNotification(
-        pos.coords.latitude,
-        pos.coords.longitude,
+        location.latitude,
+        location.longitude,
         subscription
       )
         .then((response: any) => {
@@ -165,17 +163,29 @@ function App() {
       // const data = await res.json();
       // console.log(data);
     };
+    if ("serviceWorker" in navigator) {
+      handleServiceWorker().catch((error) => {
+        console.error(error);
+      });
+    }
+  }
+  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
+  const [wokkyData, setWokkyData] = useState({} as WokkyDTO);
+  const [apiLoaded, setAPILoaded] = useState(false);
+  const [userDenied, setUserDenied] = useState(false);
+  useEffect(() => {
+    var options = {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0,
+    };
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocation({
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
         }); // store data in usestate
-        if ("serviceWorker" in navigator) {
-          handleServiceWorker(pos).catch((error) => {
-            console.error(error);
-          });
-        }
         setAPILoaded(false);
         WokkyService.isWokky(pos.coords.latitude, pos.coords.longitude)
           .then((response: any) => {
@@ -216,23 +226,37 @@ function App() {
   }
   if (apiLoaded && location.latitude !== 0 && location.longitude !== 0) {
     return (
-      <Box
-        maxW="550px"
-        p={10}
-        borderWidth="2px"
-        borderRadius="lg"
-        overflow="hidden"
-        className="main-container"
-      >
-        <Text fontSize="20px">wokky</Text>
-        <Divider bg="black" />
-        <Location
-          city={wokkyData.location.city}
-          country={wokkyData.location.country}
-        ></Location>
-        <br></br>
-        <WokkyView data={wokkyData}></WokkyView>
-      </Box>
+      <CookiesProvider>
+        <Box
+          maxW="550px"
+          p={10}
+          borderWidth="2px"
+          borderRadius="lg"
+          overflow="hidden"
+          className="main-container"
+        >
+          <Flex justify="space-between">
+            <Text fontSize="20px">wokky</Text>
+            {!cookies["notification-toggle"] ? (
+              <IconButton
+                aria-label="Search database"
+                variant="outline"
+                marginBottom={2}
+                onClick={handleNotificationToggle}
+              >
+                <IoNotifications />
+              </IconButton>
+            ) : null}
+          </Flex>
+          <Divider bg="black" />
+          <Location
+            city={wokkyData.location.city}
+            country={wokkyData.location.country}
+          ></Location>
+          <br></br>
+          <WokkyView data={wokkyData}></WokkyView>
+        </Box>
+      </CookiesProvider>
     );
   } else {
     return (
