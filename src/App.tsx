@@ -26,6 +26,8 @@ import {
   Icon,
   IconButton,
 } from "@chakra-ui/react";
+import { messaging } from "./configuration";
+import { getToken } from "firebase/messaging";
 
 export function NextWokkable({ nextWokkable }: any) {
   return (
@@ -136,29 +138,39 @@ function App() {
       path: "/",
     });
     const handleServiceWorker = async () => {
-      const register = await navigator.serviceWorker.register(
-        "/service-worker.js"
-      );
+      const permission = await Notification.requestPermission();
 
-      const subscription = await register.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey:
-          "BHeLDwj1k1ghpb8OkfnvCC0rzDaMGwucwmohZ2tOEKhfRWBwiuaonCZYt6GEhlLDXyzi3Qvzoqp1oELkUtBx97A",
-      });
-
-      WokkyService.registerNotification(
-        location.latitude,
-        location.longitude,
-        subscription
-      )
-        .then((response: any) => {
-          console.log(response.data as WokkyDTO);
-          // setWokkyData(response.data);
-          // setAPILoaded(true);
-        })
-        .catch((error) => {
-          console.log("Error: ", error);
+      if (permission === "granted") {
+        const token = await getToken(messaging, {
+          vapidKey:
+            "BHeLDwj1k1ghpb8OkfnvCC0rzDaMGwucwmohZ2tOEKhfRWBwiuaonCZYt6GEhlLDXyzi3Qvzoqp1oELkUtBx97A",
         });
+
+        WokkyService.registerNotification(
+          location.latitude,
+          location.longitude,
+          token
+        )
+          .then((response: any) => {
+            console.log(response.data as WokkyDTO);
+            // setWokkyData(response.data);
+            // setAPILoaded(true);
+          })
+          .catch((error) => {
+            console.log("Error: ", error);
+          });
+        //We can send token to server
+        console.log("Token generated : ", token);
+      } else if (permission === "denied") {
+        //notifications are blocked
+        alert("You denied for the notification");
+      }
+
+      // const subscription = await register.pushManager.subscribe({
+      //   userVisibleOnly: true,
+      //   applicationServerKey:
+      //     "BHeLDwj1k1ghpb8OkfnvCC0rzDaMGwucwmohZ2tOEKhfRWBwiuaonCZYt6GEhlLDXyzi3Qvzoqp1oELkUtBx97A",
+      // });
 
       // const data = await res.json();
       // console.log(data);
@@ -237,16 +249,14 @@ function App() {
         >
           <Flex justify="space-between">
             <Text fontSize="20px">wokky</Text>
-            {!cookies["notification-toggle"] ? (
-              <IconButton
-                aria-label="Search database"
-                variant="outline"
-                marginBottom={2}
-                onClick={handleNotificationToggle}
-              >
-                <IoNotifications />
-              </IconButton>
-            ) : null}
+            <IconButton
+              aria-label="Search database"
+              variant="outline"
+              marginBottom={2}
+              onClick={handleNotificationToggle}
+            >
+              <IoNotifications />
+            </IconButton>
           </Flex>
           <Divider bg="black" />
           <Location
